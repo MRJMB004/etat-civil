@@ -95,10 +95,52 @@ class Naissance extends Model
         'AGE_MERE' => 'float',
         'AGE_PERE' => 'float',
         'ANNEE_DECLARATION' => 'float',
+        'ANNEE_EXACTE_ENREGISTREMENT_ACTE' => 'float',
         'ANNEE_NAISSANCE' => 'float',
+        'ANNEE_NAISS_MERE' => 'float',
+        'ANNEE_NAISS_PERE' => 'float',
+        'ANNEE_REGISTRE' => 'float',
+        'JOUR_DECLARATION' => 'float',
         'JOUR_NAISSANCE' => 'float',
+        'JOUR_NAISS_MERE' => 'float',
+        'JOUR_NAISS_PERE' => 'float',
+        'JOUR_REGISTRE' => 'float',
+        'MOIS_DECLARATION' => 'float',
+        'MOIS_EXACT_ENREGISTREMENT_ACT' => 'float',
         'MOIS_NAISSANCE' => 'float',
+        'MOIS_NAISS_MERE' => 'float',
+        'MOIS_NAISS_PERE' => 'float',
+        'MOIS_REGISTRE' => 'float',
         'HEUR_DE_NAISSANCE' => 'float',
+        'MIN_DE_NAISSANCE' => 'float',
+        'MOMENT_DE_NAISSANCE' => 'float',
+        'COD_COM_LIEU_ACTUEL_MERE' => 'float',
+        'COD_COM_LIEU_ACTUEL_PERE' => 'float',
+        'COD_COM_LIEU_NAISS_MERE' => 'float',
+        'COD_COM_LIEU_NAISS_PERE' => 'float',
+        'COD_COM_RESID_DECLARANT' => 'float',
+        'COMMUNE' => 'float',
+        'COD_DIST_LIEU_ACTUEL_MERE' => 'float',
+        'COD_DIST_LIEU_ACTUEL_PERE' => 'float',
+        'COD_DIST_LIEU_NAISS_MERE' => 'float',
+        'COD_DIST_LIEU_NAISS_PERE' => 'float',
+        'COD_DIST_RESID_DECLARANT' => 'float',
+        'DISTRICT' => 'float',
+        'FOKONTANY' => 'float',
+        'IDFKT' => 'float',
+        'REGION' => 'float',
+        'MILIEU' => 'float',
+        'SEXE_ENFANT' => 'float',
+        'NAISS_VIV_MORT_NE' => 'float',
+        'NAISS_ASSIS_PERS_SANTE' => 'float',
+        'NAISS_FORM_SANITAIRE' => 'float',
+        'EXISTENCE_PERE' => 'float',
+        'PROF_MERE' => 'float',
+        'PROF_PERE' => 'float',
+        'N_ACTE' => 'float',
+        'LIEN_PARENTE_DELC' => 'float',
+        'TYPE_ENREG' => 'float',
+        'SFIN' => 'float',
     ];
 
     // ========== RELATIONS ==========
@@ -189,6 +231,50 @@ class Naissance extends Model
     }
 
     /**
+     * Obtenir l'heure complète de naissance
+     */
+    public function getHeureNaissanceCompleteAttribute()
+    {
+        if ($this->HEUR_DE_NAISSANCE !== null && $this->MIN_DE_NAISSANCE !== null) {
+            return sprintf('%02d:%02d', $this->HEUR_DE_NAISSANCE, $this->MIN_DE_NAISSANCE);
+        }
+        return 'Heure non disponible';
+    }
+
+    /**
+     * Obtenir la date de naissance de la mère
+     */
+    public function getDateNaissanceMereAttribute()
+    {
+        if ($this->JOUR_NAISS_MERE && $this->MOIS_NAISS_MERE && $this->ANNEE_NAISS_MERE) {
+            return sprintf('%02d/%02d/%d', $this->JOUR_NAISS_MERE, $this->MOIS_NAISS_MERE, $this->ANNEE_NAISS_MERE);
+        }
+        return 'Date non disponible';
+    }
+
+    /**
+     * Obtenir la date de naissance du père
+     */
+    public function getDateNaissancePereAttribute()
+    {
+        if ($this->JOUR_NAISS_PERE && $this->MOIS_NAISS_PERE && $this->ANNEE_NAISS_PERE) {
+            return sprintf('%02d/%02d/%d', $this->JOUR_NAISS_PERE, $this->MOIS_NAISS_PERE, $this->ANNEE_NAISS_PERE);
+        }
+        return 'Date non disponible';
+    }
+
+    /**
+     * Obtenir la date de déclaration
+     */
+    public function getDateDeclarationAttribute()
+    {
+        if ($this->JOUR_DECLARATION && $this->MOIS_DECLARATION && $this->ANNEE_DECLARATION) {
+            return sprintf('%02d/%02d/%d', $this->JOUR_DECLARATION, $this->MOIS_DECLARATION, $this->ANNEE_DECLARATION);
+        }
+        return 'Date non disponible';
+    }
+
+    /**
      * Vérifier si l'enfant est né vivant
      */
     public function getEstNeVivantAttribute()
@@ -204,6 +290,69 @@ class Naissance extends Model
         return $this->NAISS_ASSIS_PERS_SANTE == 1;
     }
 
+    /**
+     * Vérifier si le père existe
+     */
+    public function getPereExisteAttribute()
+    {
+        return $this->EXISTENCE_PERE == 1;
+    }
+
+    /**
+     * Obtenir le milieu de résidence en texte
+     */
+    public function getMilieuTextAttribute()
+    {
+        return $this->MILIEU == 1 ? 'Urbain' : ($this->MILIEU == 2 ? 'Rural' : 'Non défini');
+    }
+
+    /**
+     * Obtenir le type d'enregistrement en texte
+     */
+    public function getTypeEnregistrementTextAttribute()
+    {
+        $types = [
+            '1' => 'Normal',
+            '2' => 'Tardif',
+            '3' => 'Judiciaire',
+        ];
+        return $types[$this->TYPE_ENREG] ?? 'Non défini';
+    }
+
+    /**
+     * Calculer l'âge actuel de l'enfant
+     */
+    public function getAgeEnfantAttribute()
+    {
+        if ($this->ANNEE_NAISSANCE) {
+            return date('Y') - $this->ANNEE_NAISSANCE;
+        }
+        return null;
+    }
+
+    /**
+     * Obtenir le lieu de naissance complet
+     */
+    public function getLieuNaissanceCompletAttribute()
+    {
+        $lieu = [];
+        
+        if ($this->LIBFKT) {
+            $lieu[] = 'Fokontany: ' . $this->LIBFKT;
+        }
+        if ($this->LIBCOM) {
+            $lieu[] = 'Commune: ' . $this->LIBCOM;
+        }
+        if ($this->LIBDIST) {
+            $lieu[] = 'District: ' . $this->LIBDIST;
+        }
+        if ($this->LIBREG) {
+            $lieu[] = 'Région: ' . $this->LIBREG;
+        }
+        
+        return !empty($lieu) ? implode(', ', $lieu) : 'Lieu non spécifié';
+    }
+
     // ========== SCOPES ==========
 
     /**
@@ -212,6 +361,14 @@ class Naissance extends Model
     public function scopeParAnnee($query, $annee)
     {
         return $query->where('ANNEE_NAISSANCE', $annee);
+    }
+
+    /**
+     * Scope pour filtrer par mois
+     */
+    public function scopeParMois($query, $mois)
+    {
+        return $query->where('MOIS_NAISSANCE', $mois);
     }
 
     /**
@@ -231,6 +388,30 @@ class Naissance extends Model
     }
 
     /**
+     * Scope pour filtrer par district
+     */
+    public function scopeParDistrict($query, $districtId)
+    {
+        return $query->where('district_id', $districtId);
+    }
+
+    /**
+     * Scope pour filtrer par commune
+     */
+    public function scopeParCommune($query, $communeId)
+    {
+        return $query->where('commune_id', $communeId);
+    }
+
+    /**
+     * Scope pour filtrer par fokontany
+     */
+    public function scopeParFokontany($query, $fokontanyId)
+    {
+        return $query->where('fokontany_id', $fokontanyId);
+    }
+
+    /**
      * Scope pour les naissances vivantes
      */
     public function scopeNaissancesVivantes($query)
@@ -244,6 +425,92 @@ class Naissance extends Model
     public function scopeMortNes($query)
     {
         return $query->where('NAISS_VIV_MORT_NE', 2);
+    }
+
+    /**
+     * Scope pour les accouchements assistés
+     */
+    public function scopeAccouchementsAssistes($query)
+    {
+        return $query->where('NAISS_ASSIS_PERS_SANTE', 1);
+    }
+
+    /**
+     * Scope pour les naissances en milieu urbain
+     */
+    public function scopeMilieuUrbain($query)
+    {
+        return $query->where('MILIEU', 1);
+    }
+
+    /**
+     * Scope pour les naissances en milieu rural
+     */
+    public function scopeMilieuRural($query)
+    {
+        return $query->where('MILIEU', 2);
+    }
+
+    /**
+     * Scope pour filtrer par tranche d'âge de la mère
+     */
+    public function scopeParTrancheAgeMere($query, $min, $max)
+    {
+        return $query->whereBetween('AGE_MERE', [$min, $max]);
+    }
+
+    /**
+     * Scope pour filtrer par tranche d'âge du père
+     */
+    public function scopeParTrancheAgePere($query, $min, $max)
+    {
+        return $query->whereBetween('AGE_PERE', [$min, $max]);
+    }
+
+    /**
+     * Scope pour les naissances avec père déclaré
+     */
+    public function scopeAvecPere($query)
+    {
+        return $query->where('EXISTENCE_PERE', 1);
+    }
+
+    /**
+     * Scope pour les naissances sans père déclaré
+     */
+    public function scopeSansPere($query)
+    {
+        return $query->where('EXISTENCE_PERE', 2);
+    }
+
+    /**
+     * Scope pour recherche globale
+     */
+    public function scopeRecherche($query, $search)
+    {
+        return $query->where(function($q) use ($search) {
+            $q->where('NOM_ENFANT', 'LIKE', "%{$search}%")
+              ->orWhere('PRENOM_ENFANT', 'LIKE', "%{$search}%")
+              ->orWhere('NOM_MERE', 'LIKE', "%{$search}%")
+              ->orWhere('NOM_PERE', 'LIKE', "%{$search}%")
+              ->orWhere('N_ACTE', 'LIKE', "%{$search}%")
+              ->orWhere('LIBCOM', 'LIKE', "%{$search}%")
+              ->orWhere('LIBDIST', 'LIKE', "%{$search}%")
+              ->orWhere('LIBREG', 'LIKE', "%{$search}%")
+              ->orWhere('LIBFKT', 'LIKE', "%{$search}%")
+              ->orWhere('NATIONALITE_MERE', 'LIKE', "%{$search}%")
+              ->orWhere('NATIONALITE_PERE', 'LIKE', "%{$search}%")
+              ->orWhere('PROF_MERE_L', 'LIKE', "%{$search}%")
+              ->orWhere('PROF_PERE_L', 'LIKE', "%{$search}%");
+        });
+    }
+
+    /**
+     * Scope pour filtrer par période
+     */
+    public function scopeParPeriode($query, $anneeDebut, $anneeFin)
+    {
+        return $query->whereBetween('ANNEE_NAISSANCE', [$anneeDebut, $anneeFin]);
     }
 
     /**
@@ -261,5 +528,89 @@ class Naissance extends Model
             'nationaliteMere',
             'nationalitePere'
         ]);
+    }
+
+    // ========== MÉTHODES STATIQUES ==========
+
+    /**
+     * Obtenir les statistiques par année
+     */
+    public static function statistiquesParAnnee()
+    {
+        return self::selectRaw('ANNEE_NAISSANCE as annee, COUNT(*) as total')
+            ->whereNotNull('ANNEE_NAISSANCE')
+            ->groupBy('ANNEE_NAISSANCE')
+            ->orderBy('ANNEE_NAISSANCE', 'desc')
+            ->get();
+    }
+
+    /**
+     * Obtenir les statistiques par sexe
+     */
+    public static function statistiquesParSexe($annee = null)
+    {
+        $query = self::selectRaw('SEXE_ENFANT, COUNT(*) as total')
+            ->whereNotNull('SEXE_ENFANT')
+            ->groupBy('SEXE_ENFANT');
+
+        if ($annee) {
+            $query->where('ANNEE_NAISSANCE', $annee);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Obtenir les statistiques par région
+     */
+    public static function statistiquesParRegion($annee = null)
+    {
+        $query = self::selectRaw('REGION, COUNT(*) as total')
+            ->whereNotNull('REGION')
+            ->groupBy('REGION')
+            ->orderBy('total', 'desc');
+
+        if ($annee) {
+            $query->where('ANNEE_NAISSANCE', $annee);
+        }
+
+        return $query->get();
+    }
+
+    /**
+     * Obtenir le taux d'assistance médicale
+     */
+    public static function tauxAssistanceMedicale($annee = null)
+    {
+        $query = self::selectRaw('NAISS_ASSIS_PERS_SANTE, COUNT(*) as total')
+            ->whereNotNull('NAISS_ASSIS_PERS_SANTE')
+            ->groupBy('NAISS_ASSIS_PERS_SANTE');
+
+        if ($annee) {
+            $query->where('ANNEE_NAISSANCE', $annee);
+        }
+
+        $result = $query->get();
+        
+        $total = $result->sum('total');
+        $assistes = $result->where('NAISS_ASSIS_PERS_SANTE', 1)->first()->total ?? 0;
+        
+        return $total > 0 ? round(($assistes / $total) * 100, 2) : 0;
+    }
+
+    /**
+     * Obtenir la répartition par milieu
+     */
+    public static function repartitionParMilieu($annee = null)
+    {
+        $query = self::selectRaw('MILIEU, COUNT(*) as total')
+            ->whereNotNull('MILIEU')
+            ->groupBy('MILIEU');
+
+        if ($annee) {
+            $query->where('ANNEE_NAISSANCE', $annee);
+        }
+
+        return $query->get();
     }
 }
