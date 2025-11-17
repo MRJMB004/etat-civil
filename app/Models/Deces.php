@@ -4,25 +4,30 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class Deces extends Model
 {
     use HasFactory;
 
     /**
-     * Le nom de la table associée au modèle.
+     * The table associated with the model.
      *
      * @var string
      */
     protected $table = 'deces_2020_24';
 
     /**
-     * Les attributs qui sont assignables en masse.
+     * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
     protected $fillable = [
-        // Clés étrangères
+        // Foreign keys
         'region_id',
         'district_id',
         'commune_id',
@@ -32,13 +37,13 @@ class Deces extends Model
         'profession_declarant_id',
         'nationalite_id',
         
-        // Informations sur l'année et les dates
+        // Year and date information
         'ANNEE_DECES',
         'ANNEE_DECL',
         'ANNEE_NAISSANCE_DEFUNT',
         'ANN_CLASS',
         
-        // Informations sur le décès
+        // Death information
         'CAUSE_DECES',
         'LIB_CAUSE_DECES',
         'HEUR_DECES',
@@ -47,12 +52,12 @@ class Deces extends Model
         'MOIS_DECES',
         'MOMENT_DECES',
         
-        // Informations sur la déclaration
+        // Declaration information
         'JOUR_DECL',
         'MOIS_DECL',
         'N_ACTE',
         
-        // Informations géographiques - Commune
+        // Geographical information - Commune
         'COMMUNE',
         'LIBCOM',
         'COM_DECE',
@@ -64,7 +69,7 @@ class Deces extends Model
         'COMMUNE_NAISSANCE_DEFUNT',
         'COMMUNE_NAISSANCE_DEFUNT_L',
         
-        // Informations géographiques - District
+        // Geographical information - District
         'DISTRICT',
         'LIBDIST',
         'DIST_DECE',
@@ -76,7 +81,7 @@ class Deces extends Model
         'DISTRICT_NAISSANCE_DEFUNT',
         'DISTRICT_NAISSANCE_DEFUNT_L',
         
-        // Informations géographiques - Fokontany
+        // Geographical information - Fokontany
         'FOKONTANY',
         'LIBFKT',
         'IDFKT',
@@ -85,7 +90,7 @@ class Deces extends Model
         'FOKONTANY_NAISSANCE_DEFUNT',
         'FOKONTANY_NAISSANCE_DEFUNT_L',
         
-        // Informations géographiques - Région et autres
+        // Geographical information - Region and others
         'REGION',
         'LIBREG',
         'MILIEU',
@@ -93,7 +98,7 @@ class Deces extends Model
         'SANITAIRE',
         'DFIN',
         
-        // Informations sur le défunt
+        // Deceased information
         'SEXE_DEFUNT',
         'NATIONALITE_DEFUNT',
         'SITUATION_MATRIMONIAL_DEFUNT',
@@ -102,302 +107,217 @@ class Deces extends Model
         'JOUR_NAISSANCE_DEFUNT',
         'MOIS_NAISSANCE_DEFUNT',
         
-        // Informations sur le déclarant
+        // Declarant information
         'LIEN_PAR_DECLARANT_DEFUNT',
         'PROFESSION_DECLARANT',
         'PROFESSION_DECLARANT_L',
         
-        // Informations de classification
+        // Classification information
         'MOIS_CLASS',
+        'created_by'  // AJOUTÉ ICI
     ];
 
     /**
-     * Les attributs qui doivent être castés.
+     * The attributes that should be cast.
      *
      * @var array<string, string>
      */
     protected $casts = [
-        'ANNEE_DECES' => 'float',
-        'ANNEE_DECL' => 'float',
-        'ANNEE_NAISSANCE_DEFUNT' => 'float',
-        'ANN_CLASS' => 'float',
-        'HEUR_DECES' => 'float',
-        'MIN_DECES' => 'float',
-        'JOUR_DECES' => 'float',
-        'MOIS_DECES' => 'float',
-        'MOMENT_DECES' => 'float',
-        'JOUR_DECL' => 'float',
-        'MOIS_DECL' => 'float',
-        'N_ACTE' => 'float',
-        'COMMUNE' => 'float',
-        'DISTRICT' => 'float',
-        'REGION' => 'float',
-        'FOKONTANY' => 'float',
-        'IDFKT' => 'float',
-        'MILIEU' => 'float',
-        'SANITAIRE' => 'float',
-        'SEXE_DEFUNT' => 'float',
-        'NATIONALITE_DEFUNT' => 'float',
-        'SITUATION_MATRIMONIAL_DEFUNT' => 'float',
-        'PROFESSION_DEFUNT' => 'float',
-        'JOUR_NAISSANCE_DEFUNT' => 'float',
-        'MOIS_NAISSANCE_DEFUNT' => 'float',
-        'LIEN_PAR_DECLARANT_DEFUNT' => 'float',
-        'PROFESSION_DECLARANT' => 'float',
-        'MOIS_CLASS' => 'float',
+        'ANNEE_DECES' => 'integer',
+        'ANNEE_DECL' => 'integer',
+        'ANNEE_NAISSANCE_DEFUNT' => 'integer',
+        'ANN_CLASS' => 'integer',
+        'HEUR_DECES' => 'integer',
+        'MIN_DECES' => 'integer',
+        'JOUR_DECES' => 'integer',
+        'MOIS_DECES' => 'integer',
+        'MOMENT_DECES' => 'integer',
+        'JOUR_DECL' => 'integer',
+        'MOIS_DECL' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
-    // ========================================
-    // RELATIONS AVEC LES TABLES DE RÉFÉRENCE
-    // ========================================
-
     /**
-     * Un décès appartient à une région
+     * Boot the model.
      */
-    public function region()
+    protected static function boot()
     {
-        return $this->belongsTo(Region::class, 'region_id');
+        parent::boot();
+
+        static::creating(function ($deces) {
+            // Generate unique act number if not provided
+            if (empty($deces->N_ACTE)) {
+                $deces->N_ACTE = static::generateNumeroActe();
+            }
+        });
     }
 
     /**
-     * Un décès appartient à un district
+     * Generate a unique act number.
      */
-    public function district()
+    protected static function generateNumeroActe(): string
     {
-        return $this->belongsTo(District::class, 'district_id');
+        $prefix = 'ACT_D';
+        $year = date('Y');
+        
+        $latest = static::where('N_ACTE', 'like', $prefix . $year . '%')
+            ->orderBy('N_ACTE', 'desc')
+            ->first();
+
+        if ($latest) {
+            $number = (int) str_replace($prefix . $year, '', $latest->N_ACTE) + 1;
+        } else {
+            $number = 1;
+        }
+
+        return $prefix . $year . str_pad($number, 6, '0', STR_PAD_LEFT);
+    }
+
+    // ========== RELATIONS ==========
+
+    /**
+     * Get the region that owns the death.
+     */
+    public function region(): BelongsTo
+    {
+        return $this->belongsTo(Region::class);
     }
 
     /**
-     * Un décès appartient à une commune
+     * Get the district that owns the death.
      */
-    public function commune()
+    public function district(): BelongsTo
     {
-        return $this->belongsTo(Commune::class, 'commune_id');
+        return $this->belongsTo(District::class);
     }
 
     /**
-     * Un décès appartient à un fokontany
+     * Get the commune that owns the death.
      */
-    public function fokontany()
+    public function commune(): BelongsTo
     {
-        return $this->belongsTo(Fokontany::class, 'fokontany_id');
+        return $this->belongsTo(Commune::class);
     }
 
     /**
-     * Un décès a une cause de décès
+     * Get the fokontany that owns the death.
      */
-    public function causeDeces()
+    public function fokontany(): BelongsTo
     {
-        return $this->belongsTo(CauseDeces::class, 'cause_deces_id');
+        return $this->belongsTo(Fokontany::class);
     }
 
     /**
-     * Un décès a une profession pour le défunt
+     * Get the cause of death.
      */
-    public function professionDefunt()
+    public function causeDeces(): BelongsTo
+    {
+        return $this->belongsTo(CauseDeces::class);
+    }
+
+    /**
+     * Get the profession of the deceased.
+     */
+    public function professionDefunt(): BelongsTo
     {
         return $this->belongsTo(Profession::class, 'profession_defunt_id');
     }
 
     /**
-     * Un décès a une profession pour le déclarant
+     * Get the profession of the declarant.
      */
-    public function professionDeclarant()
+    public function professionDeclarant(): BelongsTo
     {
         return $this->belongsTo(Profession::class, 'profession_declarant_id');
     }
 
     /**
-     * Un décès a une nationalité
+     * Get the nationality.
      */
-    public function nationalite()
+    public function nationalite(): BelongsTo
     {
-        return $this->belongsTo(Nationalite::class, 'nationalite_id');
+        return $this->belongsTo(Nationalite::class);
     }
 
-    // ========================================
-    // ACCESSEURS (GETTERS)
-    // ========================================
+    // ========== SCOPES ==========
 
     /**
-     * Obtenir le sexe du défunt en texte
-     * 
-     * @return string
+     * Scope a query to search deaths.
      */
-    public function getSexeDefuntTextAttribute(): string
+    public function scopeSearch(Builder $query, string $search): Builder
     {
-        if ($this->SEXE_DEFUNT == 1) {
-            return 'Masculin';
-        } elseif ($this->SEXE_DEFUNT == 2) {
-            return 'Féminin';
-        }
-        return 'Non défini';
-    }
-
-    /**
-     * Obtenir la date complète du décès au format DD/MM/YYYY
-     * 
-     * @return string
-     */
-    public function getDateDecesCompleteAttribute(): string
-    {
-        if ($this->JOUR_DECES && $this->MOIS_DECES && $this->ANNEE_DECES) {
-            return sprintf(
-                '%02d/%02d/%d', 
-                $this->JOUR_DECES, 
-                $this->MOIS_DECES, 
-                $this->ANNEE_DECES
-            );
-        }
-        return 'Date non disponible';
+        return $query->where(function ($q) use ($search) {
+            $q->where('LIBCOM', 'like', "%{$search}%")
+              ->orWhere('LIBDIST', 'like', "%{$search}%")
+              ->orWhere('LIBREG', 'like', "%{$search}%")
+              ->orWhere('LIBFKT', 'like', "%{$search}%")
+              ->orWhere('N_ACTE', 'like', "%{$search}%")
+              ->orWhere('LIB_CAUSE_DECES', 'like', "%{$search}%")
+              ->orWhere('PROFESSION_DEFUNT_L', 'like', "%{$search}%");
+        });
     }
 
     /**
-     * Obtenir l'heure complète du décès au format HH:MM
-     * 
-     * @return string
+     * Scope a query to filter by year.
      */
-    public function getHeureDecesCompleteAttribute(): string
+    public function scopeByYear(Builder $query, int $year): Builder
     {
-        if ($this->HEUR_DECES !== null && $this->MIN_DECES !== null) {
-            return sprintf('%02d:%02d', $this->HEUR_DECES, $this->MIN_DECES);
-        }
-        return 'Heure non disponible';
+        return $query->where('ANNEE_DECES', $year);
     }
 
     /**
-     * Calculer l'âge du défunt au moment du décès
-     * 
-     * @return int|null
+     * Scope a query to filter by month.
      */
-    public function getAgeDefuntAttribute(): ?int
+    public function scopeByMonth(Builder $query, int $month): Builder
     {
-        if ($this->ANNEE_DECES && $this->ANNEE_NAISSANCE_DEFUNT) {
-            return (int)($this->ANNEE_DECES - $this->ANNEE_NAISSANCE_DEFUNT);
-        }
-        return null;
+        return $query->where('MOIS_DECES', $month);
     }
 
     /**
-     * Vérifier si le décès a eu lieu dans un établissement sanitaire
-     * 
-     * @return bool
+     * Scope a query to filter by sex.
      */
-    public function getDecesHopitalAttribute(): bool
+    public function scopeBySex(Builder $query, int $sex): Builder
     {
-        return $this->SANITAIRE == 1;
+        return $query->where('SEXE_DEFUNT', $sex);
     }
 
     /**
-     * Obtenir le nom complet du lieu de décès
-     * 
-     * @return string
+     * Scope a query to filter by region.
      */
-    public function getLieuDecesCompletAttribute(): string
-    {
-        $lieu = [];
-        
-        if ($this->LIBFKT) {
-            $lieu[] = 'Fokontany: ' . $this->LIBFKT;
-        }
-        if ($this->LIBCOM) {
-            $lieu[] = 'Commune: ' . $this->LIBCOM;
-        }
-        if ($this->LIBDIST) {
-            $lieu[] = 'District: ' . $this->LIBDIST;
-        }
-        if ($this->LIBREG) {
-            $lieu[] = 'Région: ' . $this->LIBREG;
-        }
-        
-        return !empty($lieu) ? implode(', ', $lieu) : 'Lieu non spécifié';
-    }
-
-    // ========================================
-    // SCOPES (FILTRES RÉUTILISABLES)
-    // ========================================
-
-    /**
-     * Scope pour filtrer par année de décès
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $annee
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeParAnnee($query, int $annee)
-    {
-        return $query->where('ANNEE_DECES', $annee);
-    }
-
-    /**
-     * Scope pour filtrer par mois
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $mois
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeParMois($query, int $mois)
-    {
-        return $query->where('MOIS_DECES', $mois);
-    }
-
-    /**
-     * Scope pour filtrer par sexe
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $sexe
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeParSexe($query, int $sexe)
-    {
-        return $query->where('SEXE_DEFUNT', $sexe);
-    }
-
-    /**
-     * Scope pour filtrer par région
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $regionId
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeParRegion($query, int $regionId)
+    public function scopeByRegion(Builder $query, int $regionId): Builder
     {
         return $query->where('region_id', $regionId);
     }
 
     /**
-     * Scope pour filtrer par district
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $districtId
-     * @return \Illuminate\Database\Eloquent\Builder
+     * Scope a query to filter by district.
      */
-    public function scopeParDistrict($query, int $districtId)
+    public function scopeByDistrict(Builder $query, int $districtId): Builder
     {
         return $query->where('district_id', $districtId);
     }
 
     /**
-     * Scope pour filtrer par commune
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $communeId
-     * @return \Illuminate\Database\Eloquent\Builder
+     * Scope a query to filter by commune.
      */
-    public function scopeParCommune($query, int $communeId)
+    public function scopeByCommune(Builder $query, int $communeId): Builder
     {
         return $query->where('commune_id', $communeId);
     }
 
     /**
-     * Scope pour filtrer les décès par tranche d'âge
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param int $min
-     * @param int $max
-     * @return \Illuminate\Database\Eloquent\Builder
+     * Scope a query to filter by fokontany.
      */
-    public function scopeParTrancheAge($query, int $min, int $max)
+    public function scopeByFokontany(Builder $query, int $fokontanyId): Builder
+    {
+        return $query->where('fokontany_id', $fokontanyId);
+    }
+
+    /**
+     * Scope a query to filter by age range.
+     */
+    public function scopeByAgeRange(Builder $query, int $min, int $max): Builder
     {
         return $query->whereNotNull('ANNEE_DECES')
                     ->whereNotNull('ANNEE_NAISSANCE_DEFUNT')
@@ -405,45 +325,33 @@ class Deces extends Model
     }
 
     /**
-     * Scope pour les décès masculins uniquement
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * Scope a query for male deaths only.
      */
-    public function scopeMasculins($query)
+    public function scopeMale(Builder $query): Builder
     {
         return $query->where('SEXE_DEFUNT', 1);
     }
 
     /**
-     * Scope pour les décès féminins uniquement
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * Scope a query for female deaths only.
      */
-    public function scopeFeminins($query)
+    public function scopeFemale(Builder $query): Builder
     {
         return $query->where('SEXE_DEFUNT', 2);
     }
 
     /**
-     * Scope pour les décès survenus à l'hôpital
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * Scope a query for hospital deaths only.
      */
-    public function scopeALhopital($query)
+    public function scopeHospitalDeaths(Builder $query): Builder
     {
         return $query->where('SANITAIRE', 1);
     }
 
     /**
-     * Scope pour charger toutes les relations en une fois
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * Scope a query to include all relations.
      */
-    public function scopeAvecRelations($query)
+    public function scopeWithRelations(Builder $query): Builder
     {
         return $query->with([
             'region',
@@ -458,81 +366,240 @@ class Deces extends Model
     }
 
     /**
-     * Scope pour les décès récents (derniers 30 jours)
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
+     * Scope a query for recent deaths (last 30 days).
      */
-    public function scopeRecents($query)
+    public function scopeRecent(Builder $query): Builder
     {
         return $query->where('created_at', '>=', now()->subDays(30));
     }
 
     /**
-     * Scope pour recherche globale
-     * 
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $search
-     * @return \Illuminate\Database\Eloquent\Builder
+     * Scope a query to filter by period.
      */
-    public function scopeRecherche($query, string $search)
+    public function scopeByPeriod(Builder $query, int $startYear, int $endYear): Builder
     {
-        return $query->where(function($q) use ($search) {
-            $q->where('LIBCOM', 'like', "%{$search}%")
-              ->orWhere('LIBDIST', 'like', "%{$search}%")
-              ->orWhere('LIBREG', 'like', "%{$search}%")
-              ->orWhere('LIBFKT', 'like', "%{$search}%")
-              ->orWhere('N_ACTE', 'like', "%{$search}%")
-              ->orWhere('LIB_CAUSE_DECES', 'like', "%{$search}%");
-        });
+        return $query->whereBetween('ANNEE_DECES', [$startYear, $endYear]);
     }
 
-    // ========================================
-    // MÉTHODES STATIQUES UTILES
-    // ========================================
+    /**
+     * Scope a query for urban area deaths.
+     */
+    public function scopeUrbanArea(Builder $query): Builder
+    {
+        return $query->where('MILIEU', 1);
+    }
 
     /**
-     * Obtenir le nombre total de décès par année
-     * 
-     * @return \Illuminate\Support\Collection
+     * Scope a query for rural area deaths.
      */
-    public static function statistiquesParAnnee()
+    public function scopeRuralArea(Builder $query): Builder
     {
-        return self::selectRaw('ANNEE_DECES as annee, COUNT(*) as total')
+        return $query->where('MILIEU', 2);
+    }
+
+    /**
+     * Scope a query to filter by cause of death.
+     */
+    public function scopeByCause(Builder $query, int $causeId): Builder
+    {
+        return $query->where('cause_deces_id', $causeId);
+    }
+
+    // ========== ACCESSORS ==========
+
+    /**
+     * Get the deceased's sex as text.
+     */
+    public function getSexeDefuntTextAttribute(): string
+    {
+        switch($this->SEXE_DEFUNT) {
+            case 1:
+                return 'Masculin';
+            case 2:
+                return 'Féminin';
+            default:
+                return 'Non spécifié';
+        }
+    }
+
+    /**
+     * Get the complete death date.
+     */
+    public function getDateDecesCompleteAttribute(): ?string
+    {
+        if ($this->JOUR_DECES && $this->MOIS_DECES && $this->ANNEE_DECES) {
+            return Carbon::create($this->ANNEE_DECES, $this->MOIS_DECES, $this->JOUR_DECES)
+                ->format('d/m/Y');
+        }
+        return null;
+    }
+
+    /**
+     * Get the complete death time.
+     */
+    public function getHeureDecesCompleteAttribute(): ?string
+    {
+        if ($this->HEUR_DECES !== null && $this->MIN_DECES !== null) {
+            return sprintf('%02d:%02d', $this->HEUR_DECES, $this->MIN_DECES);
+        }
+        return null;
+    }
+
+    /**
+     * Calculate the deceased's age at death.
+     */
+    public function getAgeDefuntAttribute(): ?int
+    {
+        if ($this->ANNEE_DECES && $this->ANNEE_NAISSANCE_DEFUNT) {
+            return $this->ANNEE_DECES - $this->ANNEE_NAISSANCE_DEFUNT;
+        }
+        return null;
+    }
+
+    /**
+     * Get the deceased's birth date.
+     */
+    public function getDateNaissanceDefuntAttribute(): ?string
+    {
+        if ($this->JOUR_NAISSANCE_DEFUNT && $this->MOIS_NAISSANCE_DEFUNT && $this->ANNEE_NAISSANCE_DEFUNT) {
+            return Carbon::create($this->ANNEE_NAISSANCE_DEFUNT, $this->MOIS_NAISSANCE_DEFUNT, $this->JOUR_NAISSANCE_DEFUNT)
+                ->format('d/m/Y');
+        }
+        return null;
+    }
+
+    /**
+     * Get the declaration date.
+     */
+    public function getDateDeclarationAttribute(): ?string
+    {
+        if ($this->JOUR_DECL && $this->MOIS_DECL && $this->ANNEE_DECL) {
+            return Carbon::create($this->ANNEE_DECL, $this->MOIS_DECL, $this->JOUR_DECL)
+                ->format('d/m/Y');
+        }
+        return null;
+    }
+
+    /**
+     * Check if death occurred in hospital.
+     */
+    public function getDecesHopitalAttribute(): bool
+    {
+        return $this->SANITAIRE == 1;
+    }
+
+    /**
+     * Get the complete death location.
+     */
+    public function getLieuDecesCompletAttribute(): string
+    {
+        $lieu = [];
+        
+        if ($this->LIBFKT) $lieu[] = "Fokontany: {$this->LIBFKT}";
+        if ($this->LIBCOM) $lieu[] = "Commune: {$this->LIBCOM}";
+        if ($this->LIBDIST) $lieu[] = "District: {$this->LIBDIST}";
+        if ($this->LIBREG) $lieu[] = "Région: {$this->LIBREG}";
+        
+        return $lieu ? implode(', ', $lieu) : 'Lieu non spécifié';
+    }
+
+    /**
+     * Get the area type as text.
+     */
+    public function getMilieuTextAttribute(): string
+    {
+        switch($this->MILIEU) {
+            case 1:
+                return 'Urbain';
+            case 2:
+                return 'Rural';
+            default:
+                return 'Non spécifié';
+        }
+    }
+
+    /**
+     * Get the marital status as text.
+     */
+    public function getSituationMatrimonialeTextAttribute(): string
+    {
+        switch($this->SITUATION_MATRIMONIAL_DEFUNT) {
+            case 1:
+                return 'Célibataire';
+            case 2:
+                return 'Marié(e)';
+            case 3:
+                return 'Divorcé(e)';
+            case 4:
+                return 'Veuf/Veuve';
+            default:
+                return 'Non spécifié';
+        }
+    }
+
+    /**
+     * Get the relationship with declarant as text.
+     */
+    public function getLienDeclarantTextAttribute(): string
+    {
+        switch($this->LIEN_PAR_DECLARANT_DEFUNT) {
+            case 1:
+                return 'Conjoint';
+            case 2:
+                return 'Enfant';
+            case 3:
+                return 'Parent';
+            case 4:
+                return 'Frère/Sœur';
+            case 5:
+                return 'Autre parent';
+            case 6:
+                return 'Non parent';
+            default:
+                return 'Non spécifié';
+        }
+    }
+
+    // ========== STATISTICAL METHODS ==========
+
+    /**
+     * Get statistics by year.
+     */
+    public static function getStatisticsByYear(): array
+    {
+        return self::selectRaw('ANNEE_DECES as year, COUNT(*) as total')
             ->whereNotNull('ANNEE_DECES')
             ->groupBy('ANNEE_DECES')
             ->orderBy('ANNEE_DECES', 'desc')
-            ->get();
+            ->get()
+            ->pluck('total', 'year')
+            ->toArray();
     }
 
     /**
-     * Obtenir le nombre de décès par sexe
-     * 
-     * @param int|null $annee
-     * @return \Illuminate\Support\Collection
+     * Get statistics by sex for a given year.
      */
-    public static function statistiquesParSexe(?int $annee = null)
+    public static function getStatisticsBySex(?int $year = null): array
     {
-        $query = self::selectRaw('SEXE_DEFUNT, COUNT(*) as total')
-            ->whereNotNull('SEXE_DEFUNT')
-            ->groupBy('SEXE_DEFUNT');
+        $query = self::selectRaw('SEXE_DEFUNT as sex, COUNT(*) as total')
+            ->whereNotNull('SEXE_DEFUNT');
 
-        if ($annee) {
-            $query->where('ANNEE_DECES', $annee);
+        if ($year) {
+            $query->where('ANNEE_DECES', $year);
         }
 
-        return $query->get();
+        return $query->groupBy('SEXE_DEFUNT')
+            ->get()
+            ->pluck('total', 'sex')
+            ->toArray();
     }
 
     /**
-     * Obtenir les causes de décès les plus fréquentes
-     * 
-     * @param int $limit
-     * @return \Illuminate\Support\Collection
+     * Get most frequent causes of death.
      */
-    public static function causesPlusFrequentes(int $limit = 10)
+    public static function getMostFrequentCauses(int $limit = 10): Collection
     {
-        return self::selectRaw('LIB_CAUSE_DECES, COUNT(*) as total')
+        return self::selectRaw('LIB_CAUSE_DECES as cause, COUNT(*) as total')
             ->whereNotNull('LIB_CAUSE_DECES')
             ->groupBy('LIB_CAUSE_DECES')
             ->orderBy('total', 'desc')
@@ -541,11 +608,9 @@ class Deces extends Model
     }
 
     /**
-     * Obtenir la pyramide des âges
-     * 
-     * @return \Illuminate\Support\Collection
+     * Get age pyramid statistics.
      */
-    public static function pyramideDesAges()
+    public static function getAgePyramid(): Collection
     {
         return self::selectRaw('
                 CASE 
@@ -559,13 +624,89 @@ class Deces extends Model
                     WHEN (ANNEE_DECES - ANNEE_NAISSANCE_DEFUNT) BETWEEN 55 AND 64 THEN "55-64 ans"
                     WHEN (ANNEE_DECES - ANNEE_NAISSANCE_DEFUNT) >= 65 THEN "65+ ans"
                     ELSE "Non défini"
-                END as tranche_age,
+                END as age_group,
+                SEXE_DEFUNT as sex,
                 COUNT(*) as total
             ')
             ->whereNotNull('ANNEE_DECES')
             ->whereNotNull('ANNEE_NAISSANCE_DEFUNT')
-            ->groupBy('tranche_age')
-            ->orderByRaw('MIN(ANNEE_DECES - ANNEE_NAISSANCE_DEFUNT)')
+            ->whereNotNull('SEXE_DEFUNT')
+            ->groupBy('age_group', 'SEXE_DEFUNT')
+            ->orderByRaw('
+                CASE age_group
+                    WHEN "0-1 an" THEN 1
+                    WHEN "1-4 ans" THEN 2
+                    WHEN "5-14 ans" THEN 3
+                    WHEN "15-24 ans" THEN 4
+                    WHEN "25-34 ans" THEN 5
+                    WHEN "35-44 ans" THEN 6
+                    WHEN "45-54 ans" THEN 7
+                    WHEN "55-64 ans" THEN 8
+                    WHEN "65+ ans" THEN 9
+                    ELSE 10
+                END
+            ')
             ->get();
+    }
+
+    /**
+     * Get monthly statistics for a given year.
+     */
+    public static function getMonthlyStatistics(int $year): array
+    {
+        return self::selectRaw('MOIS_DECES as month, COUNT(*) as total')
+            ->where('ANNEE_DECES', $year)
+            ->whereNotNull('MOIS_DECES')
+            ->groupBy('MOIS_DECES')
+            ->orderBy('MOIS_DECES')
+            ->get()
+            ->pluck('total', 'month')
+            ->toArray();
+    }
+
+    /**
+     * Get death rate by region for a given year.
+     */
+    public static function getDeathRateByRegion(?int $year = null): Collection
+    {
+        $query = self::selectRaw('REGION, LIBREG, COUNT(*) as total')
+            ->whereNotNull('REGION')
+            ->whereNotNull('LIBREG');
+
+        if ($year) {
+            $query->where('ANNEE_DECES', $year);
+        }
+
+        return $query->groupBy('REGION', 'LIBREG')
+            ->orderBy('total', 'desc')
+            ->get();
+    }
+
+    /**
+     * Get recent deaths with relations.
+     */
+    public static function getRecentDeaths(int $limit = 10): Collection
+    {
+        return self::withRelations()
+            ->latest('created_at')
+            ->limit($limit)
+            ->get();
+    }
+
+    /**
+     * Get hospital death rate for a given year.
+     */
+    public static function getHospitalDeathRate(?int $year = null): float
+    {
+        $query = self::whereNotNull('SANITAIRE');
+
+        if ($year) {
+            $query->where('ANNEE_DECES', $year);
+        }
+
+        $total = $query->count();
+        $hospitalDeaths = $query->where('SANITAIRE', 1)->count();
+
+        return $total > 0 ? round(($hospitalDeaths / $total) * 100, 2) : 0;
     }
 }

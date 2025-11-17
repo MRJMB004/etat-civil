@@ -1,12 +1,24 @@
 <?php
 
-use App\Http\Controllers\DecesController;
-use App\Http\Controllers\NaissanceController;
+use Illuminate\Support\Facades\Route;
 
-Route::resource('deces', DecesController::class);
-Route::resource('naissances', NaissanceController::class);
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
+|
+*/
 
-// Routes pour les statistiques
-Route::get('/statistiques/deces', [DecesController::class, 'statistiques']);
-Route::get('/statistiques/naissances', [NaissanceController::class, 'statistiques']);
-Route::get('/dashboard', [DecesController::class, 'dashboard']);
+Route::get('/', function () {
+    return view('welcome');
+});
+
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware(['auth'])->name('dashboard');
+
+require __DIR__.'/auth.php';
