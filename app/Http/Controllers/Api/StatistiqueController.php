@@ -50,7 +50,7 @@ class StatistiqueController extends Controller
             $totalCommunes = Commune::count();
 
             // ========== ÉVOLUTION TEMPORELLE ==========
-            $decesParAnnee = Deces::statistiquesParAnnee();
+            $decesParAnnee = Deces::getStatisticsByYear();
             $naissancesParAnnee = Naissance::selectRaw('ANNEE_NAISSANCE as annee, COUNT(*) as total')
                 ->whereNotNull('ANNEE_NAISSANCE')
                 ->groupBy('ANNEE_NAISSANCE')
@@ -58,7 +58,7 @@ class StatistiqueController extends Controller
                 ->get();
 
             // ========== RÉPARTITION DÉMOGRAPHIQUE ==========
-            $decesParSexe = Deces::statistiquesParSexe($annee);
+            $decesParSexe = Deces::getStatisticsBySex($annee);
             $naissancesParSexe = Naissance::selectRaw('SEXE_ENFANT, COUNT(*) as total')
                 ->whereNotNull('SEXE_ENFANT')
                 ->when($annee, function($q) use ($annee) {
@@ -103,8 +103,8 @@ class StatistiqueController extends Controller
                 ->get();
 
             // ========== INDICATEURS AVANCÉS ==========
-            $causesPlusFrequentes = Deces::causesPlusFrequentes(8);
-            $pyramideAges = Deces::pyramideDesAges();
+            $causesPlusFrequentes = Deces::getMostFrequentCauses(8);
+            $pyramideAges = Deces::getAgePyramid();
 
             // ========== MILIEU URBAIN/RURAL ==========
             $naissancesParMilieu = Naissance::selectRaw('MILIEU, COUNT(*) as total')
@@ -173,7 +173,7 @@ class StatistiqueController extends Controller
                         'naissances_urbain_rural' => $naissancesParMilieu,
                         'deces_urbain_rural' => $decesParMilieu,
                     ],
-                    'tendances' => $this->calculerTendances($decesParAnnee, $naissancesParAnnee),
+                    // 'tendances' => $this->calculerTendances($decesParAnnee, $naissancesParAnnee),
                 ]
             ], 200);
 

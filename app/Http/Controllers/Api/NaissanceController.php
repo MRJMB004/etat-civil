@@ -17,7 +17,7 @@ class NaissanceController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Naissance::avecRelations();
+            $query = Naissance::withRelations();
 
             // ========== FILTRES AVANCÉS ==========
             

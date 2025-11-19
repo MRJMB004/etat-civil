@@ -17,7 +17,7 @@ class DecesController extends Controller
     public function index(Request $request): JsonResponse
     {
         try {
-            $query = Deces::avecRelations();
+            $query = Deces::withRelations();
 
             // ========== FILTRES AVANCÉS ==========
             
